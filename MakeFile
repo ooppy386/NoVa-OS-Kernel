@@ -1,0 +1,44 @@
+# ============================================================================
+# NoVa Microkernel - Automated Build Pipeline
+# ============================================================================
+
+# Toolchain definitions
+CC = gcc
+AS = as
+LD = ld
+
+# Compiler Flags: 32-bit, freestanding (no standard C library), optimized
+CFLAGS = -m32 -std=gnu99 -ffreestanding -O2 -Wall -Wextra
+ASFLAGS = --32
+LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
+
+# List of object files to compile and link
+OBJS = boot.o nova_core.o nova_hal_x86.o interrupts.o nova_isr.o
+
+# Default target
+all: nova.bin
+
+# Link everything into the final kernel binary
+nova.bin: $(OBJS)
+	$(LD) $(LDFLAGS) -o nova.bin $(OBJS)
+
+# Compile C files to Object files
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile Assembly files to Object files
+%.o: %.S
+	$(AS) $(ASFLAGS) $< -o $@
+
+# Target to install necessary tools in GitHub Codespaces
+setup:
+	sudo apt-get update
+	sudo apt-get install -y build-essential gcc-multilib qemu-system-x86
+
+# Target to run the OS in headless mode (terminal output only)
+run: nova.bin
+	qemu-system-i386 -kernel nova.bin -nographic -serial mon:stdio -m 128M
+
+# Clean up build artifacts
+clean:
+	rm -f *.o nova.bin
